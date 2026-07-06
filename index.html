@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laboratório Cósmico - Buraco Negro</title>
+
+    <!-- ===== CSS EMBUTIDO ===== -->
+    <style>
+        /* Reset brutal */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Painel de controle - estilo cyberpunk minimalista */
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(10, 10, 20, 0.85);
+            backdrop-filter: blur(4px);
+            border: 1px solid #00ffcc;
+            border-radius: 12px;
+            padding: 20px 25px;
+            color: #00ffcc;
+            min-width: 220px;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+            z-index: 100;
+            user-select: none;
+        }
+
+        #controls h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #00ffcc55;
+            padding-bottom: 8px;
+        }
+
+        #controls label {
+            display: block;
+            font-size: 12px;
+            margin: 12px 0 4px;
+            color: #aaffdd;
+        }
+
+        #controls input[type="range"] {
+            width: 100%;
+            background: #112;
+            height: 4px;
+            border-radius: 2px;
+            -webkit-appearance: none;
+            appearance: none;
+            outline: none;
+        }
+
+        #controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #00ffcc;
+            cursor: pointer;
+            box-shadow: 0 0 15px #00ffcc88;
+        }
+
+        #controls button {
+            margin-top: 16px;
+            width: 100%;
+            padding: 8px;
+            background: #00ffcc22;
+            border: 1px solid #00ffcc;
+            color: #00ffcc;
+            font-family: inherit;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        #controls button:hover {
+            background: #00ffcc44;
+            box-shadow: 0 0 25px #00ffcc66;
+        }
+
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #4488aa;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.5);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border-left: 2px solid #00ffcc;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        @media (max-width: 600px) {
+            #controls {
+                top: 10px;
+                left: 10px;
+                padding: 12px 15px;
+                min-width: 160px;
+            }
+            #controls h2 { font-size: 11px; }
+            #controls label { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== HTML DA INTERFACE ===== -->
+    <div id="controls">
+        <h2>⏣ Controle do Buraco Negro</h2>
+        <label>Massa (M☉): <span id="massValue">10</span></label>
+        <input type="range" id="mass" min="1" max="80" value="10" step="0.5" />
+
+        <label>Nº Partículas: <span id="countValue">2000</span></label>
+        <input type="range" id="particleCount" min="200" max="8000" value="2000" step="100" />
+
+        <label>Velocidade de Rotação: <span id="speedValue">1.0</span></label>
+        <input type="range" id="speed" min="0" max="3" value="1" step="0.05" />
+
+        <button id="resetBtn">⟳ Resetar Órbitas</button>
+    </div>
+
+    <div id="info">🌀 Simulação gravitacional • Arraste para girar a câmera</div>
+
+    <!-- ===== CARREGAMENTO DA BIBLIOTECA (CDN) ===== -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+
+    <!-- ===== JAVASCRIPT EMBUTIDO (TUDO AQUI) ===== -->
+    <script>
+        (function() {
+            'use strict';
+
+            // ----- CONFIGURAÇÕES INICIAIS -----
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050510);
+
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+            camera.position.set(6, 4, 10);
+            camera.lookAt(0, 0, 0);
+
+            const renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: false
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.body.prepend(renderer.domElement);
+
+            // ----- LUZES (para dar volume) -----
+            const ambient = new THREE.AmbientLight(0x223355);
+            scene.add(ambient);
+            const dirLight = new THREE.DirectionalLight(0xffaa66, 1.2);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+            const backLight = new THREE.PointLight(0x4466ff, 0.5);
+            backLight.position.set(-3, 0, -5);
+            scene.add(backLight);
+
+            // ----- FUNDO COM ESTRELAS (partículas estáticas) -----
+            const starGeo = new THREE.BufferGeometry();
+            const starCount = 3000;
+            const starPos = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount * 3; i++) {
+                starPos[i] = (Math.random() - 0.5) * 300;
+            }
+            starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+            const starMat = new THREE.PointsMaterial({ color: 0x88aaff, size: 0.25, transparent: true, opacity: 0.8 });
+            const stars = new THREE.Points(starGeo, starMat);
+            scene.add(stars);
+
+            // ----- BURACO NEGRO (esfera + glow) -----
+            const bhGroup = new THREE.Group();
+            const bhGeo = new THREE.SphereGeometry(1, 48, 48);
+            const bhMat = new THREE.MeshStandardMaterial({
+                color: 0x000000,
+                roughness: 0.1,
+                metalness: 0.9,
+                emissive: 0x110022,
+                emissiveIntensity: 0.3
+            });
+            const blackHole = new THREE.Mesh(bhGeo, bhMat);
+            blackHole.castShadow = false;
+            bhGroup.add(blackHole);
+
+            // Anel de fotosfera (glow interno)
+            const glowGeo = new THREE.RingGeometry(1.05, 1.6, 64);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: 0xff6600,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.25,
+                depthWrite: false
+            });
+            const glowRing = new THREE.Mesh(glowGeo, glowMat);
+            glowRing.rotation.x = Math.PI / 2.8;
+            bhGroup.add(glowRing);
+
+            const glowRing2 = glowRing.clone();
+            glowRing2.material = glowMat.clone();
+            glowRing2.material.color.setHex(0x4488ff);
+            glowRing2.material.opacity = 0.15;
+            glowRing2.rotation.x = -Math.PI / 3;
+            glowRing2.rotation.z = 0.7;
+            bhGroup.add(glowRing2);
+
+            scene.add(bhGroup);
+
+            // ----- DISCO DE ACRECÇÃO (partículas) -----
+            let particleSystem = null;
+            let particlePositions = null;
+            let particleCount = 2000;
+            let rotationSpeed = 1.0;
+
+            function createParticles(count) {
+                if (particleSystem) {
+                    scene.remove(particleSystem);
+                    particleSystem.geometry.dispose();
+                    particleSystem.material.dispose();
+                }
+
+                const geo = new THREE.BufferGeometry();
+                const pos = new Float32Array(count * 3);
+                const colors = new Float32Array(count * 3);
+                const sizes = new Float32Array(count);
+
+                for (let i = 0; i < count; i++) {
+                    // Distribuição em disco com densidade maior perto do centro
+                    const r = 1.4 + Math.pow(Math.random(), 1.6) * 4.5;
+                    const angle = Math.random() * Math.PI * 2;
+                    const height = (Math.random() - 0.5) * 0.6 * (1 - 1 / (r + 0.5));
+
+                    pos[i * 3] = r * Math.cos(angle);
+                    pos[i * 3 + 1] = height;
+                    pos[i * 3 + 2] = r * Math.sin(angle);
+
+                    // Cores quentes (laranja/azul)
+                    const t = (r - 1.2) / 4.5;
+                    const rCol = 0.9 + 0.4 * Math.random();
+                    const gCol = 0.4 + 0.6 * (1 - t) + 0.3 * Math.random();
+                    const bCol = 0.2 + 0.8 * (1 - t) * (1 - t) + 0.2 * Math.random();
+                    colors[i * 3] = rCol;
+                    colors[i * 3 + 1] = gCol * 0.6;
+                    colors[i * 3 + 2] = bCol * 0.8;
+
+                    sizes[i] = 0.04 + Math.random() * 0.08;
+                }
+
+                geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+                const mat = new THREE.PointsMaterial({
+                    size: 0.07,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.92,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    sizeAttenuation: true
+                });
+
+                particleSystem = new THREE.Points(geo, mat);
+                // Guarda referência para atualização manual
+                particleSystem.userData.positions = pos;
+                particleSystem.userData.angles = new Float32Array(count);
+                particleSystem.userData.radii = new Float32Array(count);
+                particleSystem.userData.heights = new Float32Array(count);
+                particleSystem.userData.speeds = new Float32Array(count);
+
+                // Inicializa dados orbitais
+                const posAttr = geo.attributes.position;
+                const arr = posAttr.array;
+                for (let i = 0; i < count; i++) {
+                    const i3 = i * 3;
+                    const x = arr[i3];
+                    const z = arr[i3 + 2];
+                    const r = Math.sqrt(x * x + z * z);
+                    const angle = Math.atan2(z, x);
+                    particleSystem.userData.angles[i] = angle;
+                    particleSystem.userData.radii[i] = r;
+                    particleSystem.userData.heights[i] = arr[i3 + 1];
+                    particleSystem.userData.speeds[i] = 0.6 + 2.2 / (r + 0.3);
+                }
+
+                scene.add(particleSystem);
+                return particleSystem;
+            }
+
+            // Criação inicial
+            createParticles(particleCount);
+
+            // ----- CONTROLES DE INTERFACE -----
+            const massSlider = document.getElementById('mass');
+            const massSpan = document.getElementById('massValue');
+            const countSlider = document.getElementById('particleCount');
+            const countSpan = document.getElementById('countValue');
+            const speedSlider = document.getElementById('speed');
+            const speedSpan = document.getElementById('speedValue');
+            const resetBtn = document.getElementById('resetBtn');
+
+            // Massa -> escala do buraco negro e distorção
+            massSlider.addEventListener('input', function() {
+                const val = parseFloat(this.value);
+                massSpan.textContent = val;
+                const scale = 0.5 + (val / 80) * 2.5;
+                bhGroup.scale.set(scale, scale, scale);
+                // Ajusta brilho do glow
+                glowRing.material.opacity = 0.15 + (val / 80) * 0.35;
+                glowRing2.material.opacity = 0.08 + (val / 80) * 0.25;
+            });
+
+            // Quantidade de partículas -> recria o sistema
+            countSlider.addEventListener('input', function() {
+                const val = parseInt(this.value);
+                countSpan.textContent = val;
+                particleCount = val;
+                createParticles(val);
+                // Reaplica a rotação atual
+                if (particleSystem) {
+                    particleSystem.rotation.y = 0;
+                }
+            });
+
+            // Velocidade de rotação
+            speedSlider.addEventListener('input', function() {
+                const val = parseFloat(this.value);
+                speedSpan.textContent = val.toFixed(2);
+                rotationSpeed = val;
+            });
+
+            // Reset: recoloca partículas em órbitas aleatórias
+            resetBtn.addEventListener('click', function() {
+                if (!particleSystem) return;
+                const posAttr = particleSystem.geometry.attributes.position;
+                const arr = posAttr.array;
+                const count = particleSystem.userData.angles.length;
+                for (let i = 0; i < count; i++) {
+                    const r = 1.4 + Math.pow(Math.random(), 1.6) * 4.5;
+                    const angle = Math.random() * Math.PI * 2;
+                    const height = (Math.random() - 0.5) * 0.6 * (1 - 1 / (r + 0.5));
+                    arr[i * 3] = r * Math.cos(angle);
+                    arr[i * 3 + 1] = height;
+                    arr[i * 3 + 2] = r * Math.sin(angle);
+                    particleSystem.userData.angles[i] = angle;
+                    particleSystem.userData.radii[i] = r;
+                    particleSystem.userData.heights[i] = height;
+                    particleSystem.userData.speeds[i] = 0.6 + 2.2 / (r + 0.3);
+                }
+                posAttr.needsUpdate = true;
+                // Reseta rotação do grupo
+                if (particleSystem) particleSystem.rotation.y = 0;
+            });
+
+            // Dispara evento inicial para sincronizar UI
+            massSlider.dispatchEvent(new Event('input'));
+            countSlider.dispatchEvent(new Event('input'));
+            speedSlider.dispatchEvent(new Event('input'));
+
+            // ----- ORBIT CONTROLS (implementação manual simplificada) -----
+            let isDragging = false;
+            let previousMouse = { x: 0, y: 0 };
+            let spherical = { theta: 0.8, phi: 0.5, radius: 12 };
+            let target = new THREE.Vector3(0, 0, 0);
+
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMouse.x = e.clientX;
+                previousMouse.y = e.clientY;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const dx = (e.clientX - previousMouse.x) * 0.005;
+                const dy = (e.clientY - previousMouse.y) * 0.005;
+                spherical.theta -= dx;
+                spherical.phi = Math.max(0.2, Math.min(Math.PI - 0.2, spherical.phi - dy));
+                previousMouse.x = e.clientX;
+                previousMouse.y = e.clientY;
+                updateCamera();
+            });
+
+            window.addEventListener('mouseup', () => { isDragging = false; });
+
+            // Touch suporte
+            let touchStart = null;
+            renderer.domElement.addEventListener('touchstart', (e) => {
+                const t = e.touches[0];
+                touchStart = { x: t.clientX, y: t.clientY };
+            }, { passive: true });
+
+            renderer.domElement.addEventListener('touchmove', (e) => {
+                if (!touchStart) return;
+                const t = e.touches[0];
+                const dx = (t.clientX - touchStart.x) * 0.005;
+                const dy = (t.clientY - touchStart.y) * 0.005;
+                spherical.theta -= dx;
+                spherical.phi = Math.max(0.2, Math.min(Math.PI - 0.2, spherical.phi - dy));
+                touchStart = { x: t.clientX, y: t.clientY };
+                updateCamera();
+            }, { passive: true });
+
+            renderer.domElement.addEventListener('touchend', () => { touchStart = null; }, { passive: true });
+
+            function updateCamera() {
+                const r = spherical.radius;
+                camera.position.x = r * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+                camera.position.y = r * Math.cos(spherical.phi);
+                camera.position.z = r * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+                camera.lookAt(target);
+            }
+
+            // Zoom com scroll
+            renderer.domElement.addEventListener('wheel', (e) => {
+                spherical.radius = Math.max(3, Math.min(30, spherical.radius + e.deltaY * 0.01));
+                updateCamera();
+            }, { passive: true });
+
+            updateCamera();
+
+            // ----- LOOP DE ANIMAÇÃO (FÍSICA REAL) -----
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Rotação do disco de acreção (efeito visual)
+                if (particleSystem) {
+                    particleSystem.rotation.y += 0.008 * rotationSpeed;
+
+                    // Movimento orbital individual (simulação simplificada)
+                    const posAttr = particleSystem.geometry.attributes.position;
+                    const arr = posAttr.array;
+                    const angles = particleSystem.userData.angles;
+                    const radii = particleSystem.userData.radii;
+                    const heights = particleSystem.userData.heights;
+                    const speeds = particleSystem.userData.speeds;
+
+                    const rotFactor = 0.02 * rotationSpeed;
+                    for (let i = 0; i < particleCount; i++) {
+                        // Atualiza ângulo com velocidade angular (Kepler simplificado)
+                        angles[i] += rotFactor * speeds[i];
+                        const r = radii[i];
+                        const a = angles[i];
+                        // Pequena perturbação vertical (ondas no disco)
+                        const wave = 0.08 * Math.sin(a * 3 + performance.now() * 0.001);
+                        arr[i * 3] = r * Math.cos(a);
+                        arr[i * 3 + 1] = heights[i] + wave * 0.2;
+                        arr[i * 3 + 2] = r * Math.sin(a);
+                    }
+                    posAttr.needsUpdate = true;
+                }
+
+                // Rotação lenta das estrelas de fundo
+                stars.rotation.y += 0.0001;
+
+                // Glow pulsante
+                const pulse = 0.8 + 0.2 * Math.sin(performance.now() * 0.002);
+                glowRing.material.opacity *= (0.99 + 0.01 * pulse);
+                glowRing2.material.opacity *= (0.99 + 0.01 * pulse);
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // ----- RESPONSIVIDADE -----
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Pequena dica no console
+            console.log('🌀 Laboratório Cósmico ativo! Arraste para girar a câmera.');
+
+        })();
+    </script>
+</body>
+</html>
