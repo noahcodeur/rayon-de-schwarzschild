@@ -22,7 +22,7 @@ canvas{display:block;width:100vw;height:100vh;}
 </style>
 </head>
 <body>
-<div id="info">🌀 Buraco Negro Realista</div>
+<div id="info">🌀 Buraco Negro com Acreção</div>
 <div id="fps">FPS: --</div>
 <div id="controls">
 <h2>Controles</h2>
@@ -30,6 +30,8 @@ canvas{display:block;width:100vw;height:100vh;}
 <input type="range" id="mass" min="1" max="50" value="10" step="0.5" />
 <label>Rotacao: <span id="speedValue">1.0</span></label>
 <input type="range" id="speed" min="0" max="2.0" value="1" step="0.05" />
+<label>Queda: <span id="fallValue">1.0</span></label>
+<input type="range" id="fallRate" min="0" max="3.0" value="1.0" step="0.1" />
 <label>Distorcao: <span id="distortionValue">1.0</span></label>
 <input type="range" id="distortion" min="0" max="2.5" value="1" step="0.05" />
 <div class="row">
@@ -279,7 +281,47 @@ discBack.rotation.x = -Math.PI / 2.1;
 discBack.position.y = -0.1;
 scene.add(discBack);
 
-// ===== POEIRA FINA (PARTICULAS LEVES) =====
+// ===== JATOS POLARES =====
+function createJets() {
+    const count = 300;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    const data = { angles: new Float32Array(count), heights: new Float32Array(count), speeds: new Float32Array(count) };
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const height = 1.2 + Math.random() * 3.0;
+        const radius = 0.2 + Math.random() * 0.6;
+        pos[i*3] = radius * Math.cos(angle);
+        pos[i*3+1] = height * (Math.random() > 0.5 ? 1 : -1);
+        pos[i*3+2] = radius * Math.sin(angle);
+        const t = (height - 1.2) / 3.0;
+        colors[i*3] = 0.3 + 0.7 * (1 - t);
+        colors[i*3+1] = 0.2 + 0.3 * (1 - t);
+        colors[i*3+2] = 0.8 + 0.2 * t;
+        data.angles[i] = angle;
+        data.heights[i] = height * (Math.random() > 0.5 ? 1 : -1);
+        data.speeds[i] = 0.5 + Math.random() * 0.5;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const mat = new THREE.PointsMaterial({
+        size: 0.06,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true
+    });
+    const jets = new THREE.Points(geo, mat);
+    jets.userData = data;
+    scene.add(jets);
+    return jets;
+}
+const jets = createJets();
+
+// ===== POEIRA FINA COM ORBITAS EM ESPIRAL =====
 let dustSystem = null;
 function createDust(count) {
     if (dustSystem) {
@@ -289,42 +331,44 @@ function createDust(count) {
     }
     const geo = new THREE.BufferGeometry();
     const pos = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    const angles = new Float32Array(count);
+    const radii = new Float32Array(count);
+    const heights = new Float32Array(count);
+    const speeds = new Float32Array(count);
     for (let i = 0; i < count; i++) {
         const r = 1.5 + Math.random() * 4.5;
         const angle = Math.random() * Math.PI * 2;
-        const height = (Math.random() - 0.5) * 0.3;
+        const height = (Math.random() - 0.5) * 0.4;
         pos[i*3] = r * Math.cos(angle);
         pos[i*3+1] = height;
         pos[i*3+2] = r * Math.sin(angle);
+        const t = (r - 1.5) / 4.5;
+        colors[i*3] = 0.8 + 0.2 * (1 - t);
+        colors[i*3+1] = 0.3 + 0.5 * (1 - t);
+        colors[i*3+2] = 0.1 + 0.8 * t;
+        angles[i] = angle;
+        radii[i] = r;
+        heights[i] = height;
+        speeds[i] = 0.5 + 2.5 / (r + 0.3);
     }
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     const mat = new THREE.PointsMaterial({
-        color: 0xff8844,
-        size: 0.03,
+        size: 0.04,
+        vertexColors: true,
         transparent: true,
-        opacity: 0.3,
+        opacity: 0.7,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         sizeAttenuation: true
     });
     dustSystem = new THREE.Points(geo, mat);
-    dustSystem.userData = { angles: new Float32Array(count), radii: new Float32Array(count), heights: new Float32Array(count) };
-    const arr = dustSystem.geometry.attributes.position.array;
-    for (let i = 0; i < count; i++) {
-        const r = 1.5 + Math.random() * 4.5;
-        const angle = Math.random() * Math.PI * 2;
-        const height = (Math.random() - 0.5) * 0.3;
-        arr[i*3] = r * Math.cos(angle);
-        arr[i*3+1] = height;
-        arr[i*3+2] = r * Math.sin(angle);
-        dustSystem.userData.angles[i] = angle;
-        dustSystem.userData.radii[i] = r;
-        dustSystem.userData.heights[i] = height;
-    }
+    dustSystem.userData = { angles, radii, heights, speeds };
     scene.add(dustSystem);
     return dustSystem;
 }
-createDust(800);
+createDust(1000);
 
 // ===== POST-PROCESSING =====
 const composer = new EffectComposer(renderer);
@@ -336,7 +380,7 @@ const bloomPass = new UnrealBloomPass(
     0.3, 0.15, 0.05
 );
 bloomPass.threshold = 0.1;
-bloomPass.strength = 0.0; // Desligado por padrao no mobile
+bloomPass.strength = 0.0;
 composer.addPass(bloomPass);
 let bloomEnabled = false;
 
@@ -349,6 +393,8 @@ const massSlider = document.getElementById('mass');
 const massSpan = document.getElementById('massValue');
 const speedSlider = document.getElementById('speed');
 const speedSpan = document.getElementById('speedValue');
+const fallSlider = document.getElementById('fallRate');
+const fallSpan = document.getElementById('fallValue');
 const distortionSlider = document.getElementById('distortion');
 const distortionSpan = document.getElementById('distortionValue');
 const resetBtn = document.getElementById('resetBtn');
@@ -356,6 +402,7 @@ const toggleBloomBtn = document.getElementById('toggleBloom');
 
 let mass = 10;
 let rotationSpeed = 1.0;
+let fallRate = 1.0;
 let distortionStrength = 1.0;
 
 massSlider.addEventListener('input', function() {
@@ -373,6 +420,11 @@ speedSlider.addEventListener('input', function() {
     speedSpan.textContent = rotationSpeed.toFixed(2);
 });
 
+fallSlider.addEventListener('input', function() {
+    fallRate = parseFloat(this.value);
+    fallSpan.textContent = fallRate.toFixed(1);
+});
+
 distortionSlider.addEventListener('input', function() {
     distortionStrength = parseFloat(this.value);
     distortionSpan.textContent = distortionStrength.toFixed(2);
@@ -388,13 +440,14 @@ resetBtn.addEventListener('click', function() {
     for (let i = 0; i < count; i++) {
         const r = 1.5 + Math.random() * 4.5;
         const angle = Math.random() * Math.PI * 2;
-        const height = (Math.random() - 0.5) * 0.3;
+        const height = (Math.random() - 0.5) * 0.4;
         arr[i*3] = r * Math.cos(angle);
         arr[i*3+1] = height;
         arr[i*3+2] = r * Math.sin(angle);
         data.angles[i] = angle;
         data.radii[i] = r;
         data.heights[i] = height;
+        data.speeds[i] = 0.5 + 2.5 / (r + 0.3);
     }
     posAttr.needsUpdate = true;
     disc.rotation.y = 0;
@@ -414,6 +467,7 @@ toggleBloomBtn.addEventListener('click', function() {
 
 massSlider.dispatchEvent(new Event('input'));
 speedSlider.dispatchEvent(new Event('input'));
+fallSlider.dispatchEvent(new Event('input'));
 distortionSlider.dispatchEvent(new Event('input'));
 
 // ===== ANIMACAO =====
@@ -430,20 +484,59 @@ function animate() {
     disc.rotation.y += 0.005 * rotationSpeed;
     discBack.rotation.y += 0.005 * rotationSpeed;
 
-    // Poeira
+    // JATOS POLARES
+    if (jets) {
+        const posAttr = jets.geometry.attributes.position;
+        const arr = posAttr.array;
+        const data = jets.userData;
+        const count = data.angles.length;
+        for (let i = 0; i < count; i++) {
+            const speed = data.speeds[i];
+            let height = data.heights[i];
+            height += speed * 0.02 * rotationSpeed;
+            if (Math.abs(height) > 4.0) {
+                height = (height > 0 ? 1.2 : -1.2);
+                data.angles[i] = Math.random() * Math.PI * 2;
+            }
+            data.heights[i] = height;
+            const angle = data.angles[i] + time * 0.02 * speed;
+            const radius = 0.2 + 0.5 * (1 - Math.min(1, Math.abs(height) / 4.0));
+            arr[i*3] = radius * Math.cos(angle);
+            arr[i*3+1] = height;
+            arr[i*3+2] = radius * Math.sin(angle);
+        }
+        posAttr.needsUpdate = true;
+    }
+
+    // POEIRA COM ORBITAS EM ESPIRAL (ACRECAO)
     if (dustSystem) {
-        dustSystem.rotation.y += 0.006 * rotationSpeed;
         const posAttr = dustSystem.geometry.attributes.position;
         const arr = posAttr.array;
         const data = dustSystem.userData;
         const count = data.angles.length;
         for (let i = 0; i < count; i++) {
-            data.angles[i] += 0.01 * rotationSpeed * (0.8 + 1.5 / (data.radii[i] + 0.3));
             const r = data.radii[i];
+            // QUEDA EM ESPIRAL
+            const fall = 0.0008 * fallRate * (1.0 + 1.5 / (r + 0.3));
+            data.radii[i] -= fall * rotationSpeed;
+            // VELOCIDADE ANGULAR AUMENTA COM A QUEDA
+            const angularSpeed = 0.8 + 2.8 / (data.radii[i] + 0.3);
+            data.angles[i] += angularSpeed * 0.015 * rotationSpeed;
+            // OSCILACAO VERTICAL SUAVE
+            data.heights[i] *= 0.9995;
+            data.heights[i] += (Math.random() - 0.5) * 0.0005;
+            // RESPAWN QUANDO ENGOLIDO
+            if (data.radii[i] < 1.25) {
+                data.radii[i] = 3.5 + Math.random() * 2.5;
+                data.angles[i] = Math.random() * Math.PI * 2;
+                data.heights[i] = (Math.random() - 0.5) * 0.4;
+                data.speeds[i] = 0.5 + 2.5 / (data.radii[i] + 0.3);
+            }
             const a = data.angles[i];
-            arr[i*3] = r * Math.cos(a);
-            arr[i*3+1] = data.heights[i] + 0.02 * Math.sin(a * 3 + time);
-            arr[i*3+2] = r * Math.sin(a);
+            const newR = data.radii[i];
+            arr[i*3] = newR * Math.cos(a);
+            arr[i*3+1] = data.heights[i];
+            arr[i*3+2] = newR * Math.sin(a);
         }
         posAttr.needsUpdate = true;
     }
@@ -456,7 +549,6 @@ function animate() {
     photonRing2.rotation.z -= 0.004 * rotationSpeed;
     photonRing2.material.opacity = (0.2 + mass/50 * 0.3) * (1 - pulse * 0.3);
 
-    // Glow pulsante
     glowRing.material.opacity *= 0.998 + 0.002 * pulse;
 
     controls.update();
@@ -481,7 +573,7 @@ window.addEventListener('resize', function() {
     fxaaPass.uniforms['resolution'].value.set(1 / w, 1 / h);
 });
 
-console.log('Buraco Negro Realista Mobile rodando');
+console.log('Buraco Negro com Acrecao e Jatos Polares');
 </script>
 </body>
 </html>
