@@ -3,41 +3,32 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Buraco Negro Realista Mobile</title>
+<title>Saturno Realista</title>
 <style>
 *{margin:0;padding:0;}
-body{overflow:hidden;background:#000;font-family:'Courier New',monospace;touch-action:none;}
-canvas{display:block;width:100vw;height:100vh;}
-#controls{position:absolute;bottom:10px;left:10px;right:10px;background:rgba(10,10,20,0.85);backdrop-filter:blur(4px);border:1px solid #ff6622;border-radius:12px;padding:10px 14px;color:#ff8833;z-index:100;user-select:none;max-height:40vh;overflow-y:auto;}
-#controls h2{font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;border-bottom:1px solid #ff662255;padding-bottom:5px;color:#ffaa55;text-align:center;}
-#controls label{display:block;font-size:10px;margin:6px 0 2px;color:#ffbb77;}
-#controls input[type="range"]{width:100%;background:#221100;height:3px;border-radius:2px;-webkit-appearance:none;appearance:none;outline:none;}
-#controls input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:#ff6622;cursor:pointer;box-shadow:0 0 15px #ff662288;}
-#controls button{margin-top:6px;width:48%;padding:5px;background:#ff662222;border:1px solid #ff6622;color:#ff8833;font-family:inherit;font-weight:bold;text-transform:uppercase;letter-spacing:1px;border-radius:6px;cursor:pointer;transition:0.3s;font-size:9px;display:inline-block;}
-#controls button:hover{background:#ff662244;box-shadow:0 0 20px #ff662266;}
-#controls .row{display:flex;gap:6px;justify-content:center;}
-#info{position:absolute;top:10px;left:10px;color:#886644;font-size:9px;background:rgba(0,0,0,0.5);padding:3px 10px;border-radius:12px;border-left:2px solid #ff6622;z-index:100;pointer-events:none;}
+body{overflow:hidden;background:#000;font-family:'Courier New',monospace;}
+canvas{display:block;}
+#controls{position:absolute;bottom:10px;left:10px;right:10px;background:rgba(10,10,20,0.85);backdrop-filter:blur(4px);border:1px solid #44aaff;border-radius:12px;padding:10px 14px;color:#88ddff;z-index:100;max-height:35vh;overflow-y:auto;}
+#controls h2{font-size:11px;text-transform:uppercase;text-align:center;color:#88ddff;border-bottom:1px solid #44aaff44;padding-bottom:5px;margin-bottom:8px;}
+#controls label{display:block;font-size:10px;margin:6px 0 2px;color:#aae0ff;}
+#controls input[type="range"]{width:100%;background:#112244;height:3px;border-radius:2px;-webkit-appearance:none;appearance:none;outline:none;}
+#controls input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:#44aaff;cursor:pointer;box-shadow:0 0 15px #44aaff66;}
+#controls button{margin-top:6px;width:100%;padding:5px;background:#44aaff22;border:1px solid #44aaff;color:#88ddff;font-family:inherit;font-weight:bold;text-transform:uppercase;border-radius:6px;cursor:pointer;font-size:10px;}
+#controls button:hover{background:#44aaff44;}
+#info{position:absolute;top:10px;left:10px;color:#6688aa;font-size:9px;background:rgba(0,0,0,0.5);padding:3px 12px;border-radius:12px;border-left:2px solid #44aaff;z-index:100;pointer-events:none;}
 #fps{position:absolute;top:10px;right:10px;color:#4f8;font-size:10px;font-family:monospace;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:8px;z-index:100;pointer-events:none;border:1px solid #4f8444;}
-@media (max-width:600px){#controls{padding:8px 10px;}#controls h2{font-size:10px;}#controls label{font-size:9px;}}
 </style>
 </head>
 <body>
-<div id="info">🌀 Buraco Negro com Acreção</div>
+<div id="info">🪐 Saturno Realista</div>
 <div id="fps">FPS: --</div>
 <div id="controls">
 <h2>Controles</h2>
-<label>Massa: <span id="massValue">10</span></label>
-<input type="range" id="mass" min="1" max="50" value="10" step="0.5" />
 <label>Rotacao: <span id="speedValue">1.0</span></label>
-<input type="range" id="speed" min="0" max="2.0" value="1" step="0.05" />
-<label>Queda: <span id="fallValue">1.0</span></label>
-<input type="range" id="fallRate" min="0" max="3.0" value="1.0" step="0.1" />
-<label>Distorcao: <span id="distortionValue">1.0</span></label>
-<input type="range" id="distortion" min="0" max="2.5" value="1" step="0.05" />
-<div class="row">
-<button id="resetBtn">Resetar</button>
-<button id="toggleBloom">Bloom OFF</button>
-</div>
+<input type="range" id="speed" min="0" max="3.0" value="1.0" step="0.05" />
+<label>Inclinacao Anéis: <span id="tiltValue">27</span></label>
+<input type="range" id="tilt" min="0" max="60" value="27" step="0.5" />
+<button id="resetBtn">Resetar Camera</button>
 </div>
 <script type="importmap">
 {
@@ -50,510 +41,227 @@ canvas{display:block;width:100vw;height:100vh;}
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000008);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 300);
-camera.position.set(4, 2.5, 7);
-camera.lookAt(0, 0, 0);
+camera.position.set(3, 2, 6);
 
-const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "default" });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.prepend(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.1;
-controls.minDistance = 2.0;
+controls.minDistance = 2;
 controls.maxDistance = 20;
 controls.target.set(0, 0, 0);
-controls.rotateSpeed = 0.5;
 
-const ambient = new THREE.AmbientLight(0x112244, 0.3);
+// ===== LUZES =====
+const ambient = new THREE.AmbientLight(0x334466, 0.4);
 scene.add(ambient);
 
-const light = new THREE.DirectionalLight(0xff8844, 0.8);
-light.position.set(3, 5, 4);
-scene.add(light);
+const sunLight = new THREE.DirectionalLight(0xffeedd, 1.5);
+sunLight.position.set(5, 3, 8);
+scene.add(sunLight);
 
-const backLight = new THREE.DirectionalLight(0x4466ff, 0.3);
-backLight.position.set(-3, 0, -5);
+const backLight = new THREE.DirectionalLight(0x4488ff, 0.2);
+backLight.position.set(-5, -2, -5);
 scene.add(backLight);
 
-// ===== FUNDO COM DISTORCAO =====
-const starTexture = (() => {
+// ===== ESTRELAS DE FUNDO =====
+const starGeo = new THREE.BufferGeometry();
+const starCount = 3000;
+const starPos = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount * 3; i++) {
+    starPos[i] = (Math.random() - 0.5) * 300;
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+const starMat = new THREE.PointsMaterial({ color: 0x88aaff, size: 0.15, transparent: true, opacity: 0.7 });
+const stars = new THREE.Points(starGeo, starMat);
+scene.add(stars);
+
+// ===== TEXTURAS (GERADAS POR CANVAS - SEM DOWNLOAD) =====
+function generateSaturnTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
+    canvas.width = 512;
+    canvas.height = 256;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#000008';
-    ctx.fillRect(0, 0, 1024, 512);
-    for (let i = 0; i < 3000; i++) {
-        const x = Math.random() * 1024;
-        const y = Math.random() * 512;
-        const size = 0.5 + Math.random() * 1.5;
-        const bright = 0.3 + Math.random() * 0.7;
-        ctx.fillStyle = `rgba(200, 220, 255, ${bright})`;
+    // Fundo base (bege/amarelo)
+    const grad = ctx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0, '#c8a86a');
+    grad.addColorStop(0.3, '#d4b87a');
+    grad.addColorStop(0.5, '#e8d09a');
+    grad.addColorStop(0.7, '#d4b87a');
+    grad.addColorStop(1, '#c8a86a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 256);
+    // Listras horizontais (bandas atmosféricas)
+    for (let i = 0; i < 20; i++) {
+        const y = Math.random() * 256;
+        const height = 2 + Math.random() * 8;
+        const bright = 0.6 + Math.random() * 0.4;
+        ctx.fillStyle = `rgba(180, 160, 120, ${0.3 + 0.4 * (1 - bright)})`;
+        ctx.fillRect(0, y, 512, height);
+    }
+    // Perturbações (turbulência)
+    for (let i = 0; i < 50; i++) {
+        const x = Math.random() * 512;
+        const y = Math.random() * 256;
+        const size = 5 + Math.random() * 20;
+        const alpha = 0.1 + Math.random() * 0.2;
+        ctx.fillStyle = `rgba(200, 180, 140, ${alpha})`;
         ctx.beginPath();
         ctx.arc(x, y, size, 0, Math.PI * 2);
         ctx.fill();
     }
     return new THREE.CanvasTexture(canvas);
-})();
-
-const distortionUniforms = {
-    uTexture: { value: starTexture },
-    uDistortion: { value: 1.0 },
-    uMass: { value: 10.0 },
-    uTime: { value: 0.0 }
-};
-
-const distortionShader = {
-    vertexShader: `
-        varying vec2 vUv;
-        void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    `,
-    fragmentShader: `
-        uniform sampler2D uTexture;
-        uniform float uDistortion;
-        uniform float uMass;
-        uniform float uTime;
-        varying vec2 vUv;
-
-        void main() {
-            vec2 uv = vUv;
-            vec2 center = vec2(0.5, 0.5);
-            vec2 dir = uv - center;
-            float dist = length(dir);
-            float strength = uDistortion * uMass * 0.03;
-            float distortion = 1.0 + strength / (dist + 0.05);
-            vec2 distortedUv = center + dir * distortion;
-            if (distortedUv.x < 0.0 || distortedUv.x > 1.0 || distortedUv.y < 0.0 || distortedUv.y > 1.0) {
-                gl_FragColor = vec4(0.0, 0.0, 0.05, 1.0);
-            } else {
-                vec4 color = texture2D(uTexture, distortedUv);
-                float vignette = 1.0 - smoothstep(0.3, 1.0, dist);
-                color.rgb *= (0.7 + 0.3 * vignette);
-                gl_FragColor = color;
-            }
-        }
-    `
-};
-
-const starPlane = new THREE.Mesh(
-    new THREE.PlaneGeometry(60, 30),
-    new THREE.ShaderMaterial({
-        uniforms: distortionUniforms,
-        vertexShader: distortionShader.vertexShader,
-        fragmentShader: distortionShader.fragmentShader,
-        depthWrite: false,
-        depthTest: false
-    })
-);
-starPlane.position.set(0, 0, -20);
-scene.add(starPlane);
-
-// ===== BURACO NEGRO =====
-const bhGroup = new THREE.Group();
-
-const bhGeo = new THREE.SphereGeometry(1, 48, 48);
-const bhMat = new THREE.MeshStandardMaterial({
-    color: 0x000000,
-    roughness: 0.1,
-    metalness: 0.9,
-    emissive: 0x110022,
-    emissiveIntensity: 0.2
-});
-const blackHole = new THREE.Mesh(bhGeo, bhMat);
-bhGroup.add(blackHole);
-
-// Anel de fotons (photon ring)
-const ringGeo = new THREE.TorusGeometry(1.15, 0.02, 24, 80);
-const ringMat = new THREE.MeshBasicMaterial({
-    color: 0xff8844,
-    transparent: true,
-    opacity: 0.7,
-    blending: THREE.AdditiveBlending
-});
-const photonRing = new THREE.Mesh(ringGeo, ringMat);
-photonRing.rotation.x = Math.PI / 2.3;
-bhGroup.add(photonRing);
-
-const ringGeo2 = new THREE.TorusGeometry(1.35, 0.015, 24, 80);
-const ringMat2 = new THREE.MeshBasicMaterial({
-    color: 0x4488ff,
-    transparent: true,
-    opacity: 0.4,
-    blending: THREE.AdditiveBlending
-});
-const photonRing2 = new THREE.Mesh(ringGeo2, ringMat2);
-photonRing2.rotation.x = -Math.PI / 2.8;
-photonRing2.rotation.z = 0.5;
-bhGroup.add(photonRing2);
-
-// Glow interno
-const glowGeo = new THREE.RingGeometry(1.02, 1.6, 64);
-const glowMat = new THREE.MeshBasicMaterial({
-    color: 0xff6633,
-    side: THREE.DoubleSide,
-    transparent: true,
-    opacity: 0.12,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
-});
-const glowRing = new THREE.Mesh(glowGeo, glowMat);
-glowRing.rotation.x = Math.PI / 2.5;
-bhGroup.add(glowRing);
-
-scene.add(bhGroup);
-
-// ===== DISCO DE ACRECAO COM TEXTURA =====
-function generateDiscTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.createImageData(512, 512);
-    const data = imageData.data;
-    for (let y = 0; y < 512; y++) {
-        for (let x = 0; x < 512; x++) {
-            const i = (y * 512 + x) * 4;
-            const dx = x - 256;
-            const dy = y - 256;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            const angle = Math.atan2(dy, dx);
-            if (dist < 30 || dist > 220) {
-                data[i] = 0; data[i+1] = 0; data[i+2] = 0; data[i+3] = 0;
-                continue;
-            }
-            const t = (dist - 30) / 190;
-            const turbulence = 0.15 * Math.sin(angle * 8 + dist * 0.05) + 0.15 * Math.cos(angle * 5 - dist * 0.03);
-            const r = 0.1 + 0.9 * (1 - t) + turbulence * 0.3;
-            const g = 0.05 + 0.6 * (1 - t * t) + turbulence * 0.2;
-            const b = 0.05 + 0.8 * t + turbulence * 0.1;
-            const alpha = 0.6 + 0.4 * (1 - t);
-            data[i] = Math.min(1, Math.max(0, r)) * 255;
-            data[i+1] = Math.min(1, Math.max(0, g * 0.6)) * 255;
-            data[i+2] = Math.min(1, Math.max(0, b * 0.8)) * 255;
-            data[i+3] = Math.min(1, Math.max(0, alpha)) * 255;
-        }
-    }
-    ctx.putImageData(imageData, 0, 0);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(2, 1);
-    return texture;
 }
 
-const discTexture = generateDiscTexture();
+function generateRingTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    // Fundo transparente
+    ctx.clearRect(0, 0, 1024, 64);
+    // Anéis com gaps
+    for (let x = 0; x < 1024; x++) {
+        const t = x / 1024;
+        const dist = 0.3 + t * 0.7;
+        // Densidade dos anéis (Cassini division)
+        let density = 0.7 + 0.3 * Math.sin(t * 30) + 0.2 * Math.sin(t * 70 + 0.5);
+        // Gap principal (Divisão de Cassini)
+        if (t > 0.35 && t < 0.40) density *= 0.1;
+        if (t > 0.65 && t < 0.70) density *= 0.3;
+        // Anel F (externo)
+        if (t > 0.85) density *= 0.5 + 0.5 * Math.sin(t * 80);
+        const alpha = Math.min(1, density * 0.9);
+        const bright = 0.6 + 0.4 * density;
+        ctx.fillStyle = `rgba(220, 200, 170, ${alpha * 0.8})`;
+        ctx.fillRect(x, 0, 1, 64);
+    }
+    return new THREE.CanvasTexture(canvas);
+}
 
-const discGeo = new THREE.RingGeometry(1.3, 5.5, 80);
-const discMat = new THREE.MeshBasicMaterial({
-    map: discTexture,
+// ===== PLANETA SATURNO =====
+const saturnGroup = new THREE.Group();
+
+// Esfera do planeta
+const planetGeo = new THREE.SphereGeometry(1, 64, 64);
+const planetMat = new THREE.MeshStandardMaterial({
+    map: generateSaturnTexture(),
+    roughness: 0.7,
+    metalness: 0.1,
+    emissive: 0x221100,
+    emissiveIntensity: 0.05
+});
+const planet = new THREE.Mesh(planetGeo, planetMat);
+saturnGroup.add(planet);
+
+// ===== ANÉIS =====
+const ringTexture = generateRingTexture();
+const ringGeo = new THREE.RingGeometry(1.4, 2.8, 120);
+const ringMat = new THREE.MeshBasicMaterial({
+    map: ringTexture,
     side: THREE.DoubleSide,
     transparent: true,
-    opacity: 0.9,
-    blending: THREE.AdditiveBlending,
+    opacity: 0.85,
     depthWrite: false
 });
-const disc = new THREE.Mesh(discGeo, discMat);
-disc.rotation.x = Math.PI / 2.1;
-scene.add(disc);
+const rings = new THREE.Mesh(ringGeo, ringMat);
+rings.rotation.x = Math.PI / 2.5; // Inclinação inicial
+saturnGroup.add(rings);
 
-const discBack = disc.clone();
-discBack.material = discMat.clone();
-discBack.material.opacity = 0.4;
-discBack.rotation.x = -Math.PI / 2.1;
-discBack.position.y = -0.1;
-scene.add(discBack);
+// Anel interno mais fino
+const ringGeoInner = new THREE.RingGeometry(1.2, 1.35, 80);
+const ringMatInner = new THREE.MeshBasicMaterial({
+    color: 0xccbbaa,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.3,
+    depthWrite: false
+});
+const ringInner = new THREE.Mesh(ringGeoInner, ringMatInner);
+ringInner.rotation.x = Math.PI / 2.5;
+saturnGroup.add(ringInner);
 
-// ===== JATOS POLARES =====
-function createJets() {
-    const count = 300;
-    const geo = new THREE.BufferGeometry();
-    const pos = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    const data = { angles: new Float32Array(count), heights: new Float32Array(count), speeds: new Float32Array(count) };
-    for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const height = 1.2 + Math.random() * 3.0;
-        const radius = 0.2 + Math.random() * 0.6;
-        pos[i*3] = radius * Math.cos(angle);
-        pos[i*3+1] = height * (Math.random() > 0.5 ? 1 : -1);
-        pos[i*3+2] = radius * Math.sin(angle);
-        const t = (height - 1.2) / 3.0;
-        colors[i*3] = 0.3 + 0.7 * (1 - t);
-        colors[i*3+1] = 0.2 + 0.3 * (1 - t);
-        colors[i*3+2] = 0.8 + 0.2 * t;
-        data.angles[i] = angle;
-        data.heights[i] = height * (Math.random() > 0.5 ? 1 : -1);
-        data.speeds[i] = 0.5 + Math.random() * 0.5;
-    }
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    const mat = new THREE.PointsMaterial({
-        size: 0.06,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.6,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        sizeAttenuation: true
-    });
-    const jets = new THREE.Points(geo, mat);
-    jets.userData = data;
-    scene.add(jets);
-    return jets;
+scene.add(saturnGroup);
+
+// ===== LUAS (OPCIONAL) =====
+const moonGroup = new THREE.Group();
+function createMoon(radius, color, orbitRadius, speed) {
+    const geo = new THREE.SphereGeometry(radius, 16, 16);
+    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.8 });
+    const moon = new THREE.Mesh(geo, mat);
+    moon.userData = { orbitRadius, speed, angle: Math.random() * Math.PI * 2 };
+    moonGroup.add(moon);
+    return moon;
 }
-const jets = createJets();
-
-// ===== POEIRA FINA COM ORBITAS EM ESPIRAL =====
-let dustSystem = null;
-function createDust(count) {
-    if (dustSystem) {
-        scene.remove(dustSystem);
-        dustSystem.geometry.dispose();
-        dustSystem.material.dispose();
-    }
-    const geo = new THREE.BufferGeometry();
-    const pos = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    const angles = new Float32Array(count);
-    const radii = new Float32Array(count);
-    const heights = new Float32Array(count);
-    const speeds = new Float32Array(count);
-    for (let i = 0; i < count; i++) {
-        const r = 1.5 + Math.random() * 4.5;
-        const angle = Math.random() * Math.PI * 2;
-        const height = (Math.random() - 0.5) * 0.4;
-        pos[i*3] = r * Math.cos(angle);
-        pos[i*3+1] = height;
-        pos[i*3+2] = r * Math.sin(angle);
-        const t = (r - 1.5) / 4.5;
-        colors[i*3] = 0.8 + 0.2 * (1 - t);
-        colors[i*3+1] = 0.3 + 0.5 * (1 - t);
-        colors[i*3+2] = 0.1 + 0.8 * t;
-        angles[i] = angle;
-        radii[i] = r;
-        heights[i] = height;
-        speeds[i] = 0.5 + 2.5 / (r + 0.3);
-    }
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    const mat = new THREE.PointsMaterial({
-        size: 0.04,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.7,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        sizeAttenuation: true
-    });
-    dustSystem = new THREE.Points(geo, mat);
-    dustSystem.userData = { angles, radii, heights, speeds };
-    scene.add(dustSystem);
-    return dustSystem;
-}
-createDust(1000);
-
-// ===== POST-PROCESSING =====
-const composer = new EffectComposer(renderer);
-const renderPass = new RenderPass(scene, camera);
-composer.addPass(renderPass);
-
-const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.3, 0.15, 0.05
-);
-bloomPass.threshold = 0.1;
-bloomPass.strength = 0.0;
-composer.addPass(bloomPass);
-let bloomEnabled = false;
-
-const fxaaPass = new ShaderPass(FXAAShader);
-fxaaPass.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
-composer.addPass(fxaaPass);
+createMoon(0.08, 0xccbbaa, 1.6, 0.5);
+createMoon(0.12, 0x887766, 2.0, 0.3);
+createMoon(0.06, 0x99aacc, 2.4, 0.7);
+scene.add(moonGroup);
 
 // ===== CONTROLES UI =====
-const massSlider = document.getElementById('mass');
-const massSpan = document.getElementById('massValue');
 const speedSlider = document.getElementById('speed');
 const speedSpan = document.getElementById('speedValue');
-const fallSlider = document.getElementById('fallRate');
-const fallSpan = document.getElementById('fallValue');
-const distortionSlider = document.getElementById('distortion');
-const distortionSpan = document.getElementById('distortionValue');
+const tiltSlider = document.getElementById('tilt');
+const tiltSpan = document.getElementById('tiltValue');
 const resetBtn = document.getElementById('resetBtn');
-const toggleBloomBtn = document.getElementById('toggleBloom');
 
-let mass = 10;
 let rotationSpeed = 1.0;
-let fallRate = 1.0;
-let distortionStrength = 1.0;
-
-massSlider.addEventListener('input', function() {
-    mass = parseFloat(this.value);
-    massSpan.textContent = mass;
-    const scale = 0.5 + (mass / 50) * 2.5;
-    bhGroup.scale.set(scale, scale, scale);
-    glowRing.material.opacity = 0.06 + (mass / 50) * 0.2;
-    photonRing.material.opacity = 0.3 + (mass / 50) * 0.5;
-    distortionUniforms.uMass.value = mass;
-});
+let ringTilt = 27;
 
 speedSlider.addEventListener('input', function() {
     rotationSpeed = parseFloat(this.value);
     speedSpan.textContent = rotationSpeed.toFixed(2);
 });
 
-fallSlider.addEventListener('input', function() {
-    fallRate = parseFloat(this.value);
-    fallSpan.textContent = fallRate.toFixed(1);
-});
-
-distortionSlider.addEventListener('input', function() {
-    distortionStrength = parseFloat(this.value);
-    distortionSpan.textContent = distortionStrength.toFixed(2);
-    distortionUniforms.uDistortion.value = distortionStrength;
+tiltSlider.addEventListener('input', function() {
+    ringTilt = parseFloat(this.value);
+    tiltSpan.textContent = ringTilt.toFixed(1);
+    const tiltRad = ringTilt * Math.PI / 180;
+    rings.rotation.x = Math.PI / 2.5 + tiltRad * 0.5;
+    ringInner.rotation.x = Math.PI / 2.5 + tiltRad * 0.5;
 });
 
 resetBtn.addEventListener('click', function() {
-    if (!dustSystem) return;
-    const posAttr = dustSystem.geometry.attributes.position;
-    const arr = posAttr.array;
-    const data = dustSystem.userData;
-    const count = data.angles.length;
-    for (let i = 0; i < count; i++) {
-        const r = 1.5 + Math.random() * 4.5;
-        const angle = Math.random() * Math.PI * 2;
-        const height = (Math.random() - 0.5) * 0.4;
-        arr[i*3] = r * Math.cos(angle);
-        arr[i*3+1] = height;
-        arr[i*3+2] = r * Math.sin(angle);
-        data.angles[i] = angle;
-        data.radii[i] = r;
-        data.heights[i] = height;
-        data.speeds[i] = 0.5 + 2.5 / (r + 0.3);
-    }
-    posAttr.needsUpdate = true;
-    disc.rotation.y = 0;
-    dustSystem.rotation.y = 0;
+    camera.position.set(3, 2, 6);
+    controls.target.set(0, 0, 0);
+    controls.update();
 });
-
-toggleBloomBtn.addEventListener('click', function() {
-    bloomEnabled = !bloomEnabled;
-    if (bloomEnabled) {
-        bloomPass.strength = 0.25;
-        this.textContent = 'Bloom ON';
-    } else {
-        bloomPass.strength = 0.0;
-        this.textContent = 'Bloom OFF';
-    }
-});
-
-massSlider.dispatchEvent(new Event('input'));
-speedSlider.dispatchEvent(new Event('input'));
-fallSlider.dispatchEvent(new Event('input'));
-distortionSlider.dispatchEvent(new Event('input'));
 
 // ===== ANIMACAO =====
 let frameCount = 0;
 let lastFpsUpdate = performance.now();
-let time = 0;
 
 function animate() {
     requestAnimationFrame(animate);
-    time += 0.01;
-    distortionUniforms.uTime.value = time;
-
-    // Rotacao do disco
-    disc.rotation.y += 0.005 * rotationSpeed;
-    discBack.rotation.y += 0.005 * rotationSpeed;
-
-    // JATOS POLARES
-    if (jets) {
-        const posAttr = jets.geometry.attributes.position;
-        const arr = posAttr.array;
-        const data = jets.userData;
-        const count = data.angles.length;
-        for (let i = 0; i < count; i++) {
-            const speed = data.speeds[i];
-            let height = data.heights[i];
-            height += speed * 0.02 * rotationSpeed;
-            if (Math.abs(height) > 4.0) {
-                height = (height > 0 ? 1.2 : -1.2);
-                data.angles[i] = Math.random() * Math.PI * 2;
-            }
-            data.heights[i] = height;
-            const angle = data.angles[i] + time * 0.02 * speed;
-            const radius = 0.2 + 0.5 * (1 - Math.min(1, Math.abs(height) / 4.0));
-            arr[i*3] = radius * Math.cos(angle);
-            arr[i*3+1] = height;
-            arr[i*3+2] = radius * Math.sin(angle);
-        }
-        posAttr.needsUpdate = true;
-    }
-
-    // POEIRA COM ORBITAS EM ESPIRAL (ACRECAO)
-    if (dustSystem) {
-        const posAttr = dustSystem.geometry.attributes.position;
-        const arr = posAttr.array;
-        const data = dustSystem.userData;
-        const count = data.angles.length;
-        for (let i = 0; i < count; i++) {
-            const r = data.radii[i];
-            // QUEDA EM ESPIRAL
-            const fall = 0.0008 * fallRate * (1.0 + 1.5 / (r + 0.3));
-            data.radii[i] -= fall * rotationSpeed;
-            // VELOCIDADE ANGULAR AUMENTA COM A QUEDA
-            const angularSpeed = 0.8 + 2.8 / (data.radii[i] + 0.3);
-            data.angles[i] += angularSpeed * 0.015 * rotationSpeed;
-            // OSCILACAO VERTICAL SUAVE
-            data.heights[i] *= 0.9995;
-            data.heights[i] += (Math.random() - 0.5) * 0.0005;
-            // RESPAWN QUANDO ENGOLIDO
-            if (data.radii[i] < 1.25) {
-                data.radii[i] = 3.5 + Math.random() * 2.5;
-                data.angles[i] = Math.random() * Math.PI * 2;
-                data.heights[i] = (Math.random() - 0.5) * 0.4;
-                data.speeds[i] = 0.5 + 2.5 / (data.radii[i] + 0.3);
-            }
-            const a = data.angles[i];
-            const newR = data.radii[i];
-            arr[i*3] = newR * Math.cos(a);
-            arr[i*3+1] = data.heights[i];
-            arr[i*3+2] = newR * Math.sin(a);
-        }
-        posAttr.needsUpdate = true;
-    }
-
-    // Anel de fotons pulsante
-    const pulse = 0.7 + 0.3 * Math.sin(time * 0.8);
-    photonRing.material.opacity = (0.3 + mass/50 * 0.4) * pulse;
-    photonRing.scale.set(1 + 0.02 * Math.sin(time * 0.5), 1 + 0.02 * Math.sin(time * 0.5), 1);
-    photonRing.rotation.z += 0.003 * rotationSpeed;
-    photonRing2.rotation.z -= 0.004 * rotationSpeed;
-    photonRing2.material.opacity = (0.2 + mass/50 * 0.3) * (1 - pulse * 0.3);
-
-    glowRing.material.opacity *= 0.998 + 0.002 * pulse;
-
+    
+    // Rotacao do planeta
+    saturnGroup.rotation.y += 0.008 * rotationSpeed;
+    
+    // Luas orbitando
+    moonGroup.children.forEach((moon, i) => {
+        const data = moon.userData;
+        data.angle += 0.01 * data.speed * rotationSpeed;
+        const x = data.orbitRadius * Math.cos(data.angle);
+        const z = data.orbitRadius * Math.sin(data.angle);
+        moon.position.set(x, 0, z);
+    });
+    
+    // Estrelas girando lentamente
+    stars.rotation.y += 0.0001;
+    
     controls.update();
-    composer.render();
-
+    renderer.render(scene, camera);
+    
     frameCount++;
     if (performance.now() - lastFpsUpdate > 1000) {
         document.getElementById('fps').textContent = `FPS: ${frameCount}`;
@@ -569,11 +277,9 @@ window.addEventListener('resize', function() {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
-    composer.setSize(w, h);
-    fxaaPass.uniforms['resolution'].value.set(1 / w, 1 / h);
 });
 
-console.log('Buraco Negro com Acrecao e Jatos Polares');
+console.log('Saturno Realista rodando!');
 </script>
 </body>
 </html>
